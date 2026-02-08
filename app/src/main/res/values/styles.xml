@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <!-- =========================
+         APP THEME
+         ========================= -->
+    <style name="Theme.SmartStockLoyalty" parent="Theme.MaterialComponents.Light.NoActionBar">
+        <!-- Osnovne boje (ako ih imaš u colors.xml) -->
+        <item name="colorPrimary">@color/brand_blue</item>
+        <item name="colorPrimaryVariant">@color/brand_blue</item>
+        <item name="colorOnPrimary">@android:color/white</item>
+
+        <item name="colorSecondary">@color/brand_blue</item>
+        <item name="colorSecondaryVariant">@color/brand_blue</item>
+        <item name="colorOnSecondary">@android:color/white</item>
+
+        <!-- Pozadina -->
+        <item name="android:windowBackground">@android:color/white</item>
+
+        <!-- Ako želiš da svi default Button-i budu outline po difoltu, odkomentariši: -->
+        <!-- <item name="buttonStyle">@style/SmartOutlineButton</item> -->
+    </style>
+
+    <!-- =========================
+         OUTLINE BUTTON (tvoja dugmad)
+         Rešava problem tintovanja (ljubičasto punjenje)
+         ========================= -->
+    <style name="SmartOutlineButton">
+        <!-- Tvoj drawable -->
+        <item name="android:background">@drawable/button_outline_active</item>
+
+        <!-- Najbitnije: isključi tint koji Material tema nameće -->
+        <item name="android:backgroundTint">@null</item>
+        <item name="backgroundTint">@null</item>
+
+        <!-- Tekst -->
+        <item name="android:textColor">@color/brand_blue</item>
+        <item name="android:textAllCaps">true</item>
+
+        <!-- Visina / padding -->
+        <item name="android:minHeight">52dp</item>
+        <item name="android:paddingLeft">12dp</item>
+        <item name="android:paddingRight">12dp</item>
+    </style>
+
+    <!-- =========================
+         OUTLINE SPINNER (opciono)
+         ========================= -->
+    <style name="SmartOutlineSpinner">
+        <item name="android:background">@drawable/spinner_outline_with_arrow</item>
+        <item name="android:backgroundTint">@null</item>
+        <item name="backgroundTint">@null</item>
+    </style>
+
+</resources>

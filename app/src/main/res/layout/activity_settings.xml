@@ -1,0 +1,197 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:fillViewport="true"
+    android:padding="16dp"
+    android:background="#FFFFFF">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical">
+
+        <TextView
+            android:id="@+id/tvSettingsTitle"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Podešavanja"
+            android:textStyle="bold"
+            android:textSize="22sp"
+            android:gravity="center"
+            android:textColor="@color/brand_blue" />
+
+        <TextView
+            android:id="@+id/tvSettingsSubtitle"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Opcije koje utiču na ulaz u aplikaciju."
+            android:textSize="12sp"
+            android:alpha="0.75"
+            android:gravity="center"
+            android:layout_marginTop="6dp"
+            android:layout_marginBottom="18dp" />
+
+        <!-- Quick unlock -->
+        <com.google.android.material.card.MaterialCardView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            app:cardUseCompatPadding="true">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:padding="16dp"
+                android:orientation="vertical">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Brzo otključavanje telefonom"
+                    android:textStyle="bold"
+                    android:textColor="@color/brand_blue"
+                    android:textSize="16sp" />
+
+                <TextView
+                    android:id="@+id/tvQuickUnlockDesc"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Ako je uključeno, aplikaciju možeš otključati otiskom/Face/PIN-om telefona."
+                    android:textSize="13sp"
+                    android:layout_marginTop="8dp"
+                    android:alpha="0.85" />
+
+                <com.google.android.material.switchmaterial.SwitchMaterial
+                    android:id="@+id/swQuickUnlock"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Uključi brzo otključavanje"
+                    android:layout_marginTop="12dp" />
+
+                <TextView
+                    android:id="@+id/tvQuickUnlockState"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Status: —"
+                    android:textSize="12sp"
+                    android:alpha="0.75"
+                    android:layout_marginTop="8dp" />
+
+                <Button
+                    android:id="@+id/btnClearSavedEmail"
+                    android:layout_width="match_parent"
+                    android:layout_height="52dp"
+                    android:layout_marginTop="14dp"
+                    android:text="Obriši sačuvani email"
+                    android:textAllCaps="false"
+                    android:background="@drawable/button_outline_active"
+                    android:textColor="@color/white" />
+
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
+        <!-- Uputstvo / FAQ -->
+        <com.google.android.material.card.MaterialCardView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            app:cardUseCompatPadding="true"
+            android:layout_marginTop="14dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:padding="16dp"
+                android:orientation="vertical">
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="Najčešća pitanja"
+                    android:textStyle="bold"
+                    android:textColor="@color/white"
+                    android:textSize="16sp" />
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:layout_marginTop="12dp">
+
+                    <Button
+                        android:id="@+id/btnHelpOpste"
+                        android:layout_width="0dp"
+                        android:layout_height="44dp"
+                        android:layout_weight="1"
+                        android:text="Opšte"
+                        android:textAllCaps="false"
+                        android:background="@drawable/button_outline_active"
+                        android:textColor="@color/white" />
+
+                    <Button
+                        android:id="@+id/btnHelpClanarina"
+                        android:layout_width="0dp"
+                        android:layout_height="44dp"
+                        android:layout_weight="1"
+                        android:layout_marginStart="8dp"
+                        android:text="Članarina"
+                        android:textAllCaps="false"
+                        android:background="@drawable/button_outline_active"
+                        android:textColor="@color/white" />
+
+                    <Button
+                        android:id="@+id/btnHelpIsplate"
+                        android:layout_width="0dp"
+                        android:layout_height="44dp"
+                        android:layout_weight="1"
+                        android:layout_marginStart="8dp"
+                        android:text="Isplate"
+                        android:textAllCaps="false"
+                        android:background="@drawable/button_outline_active"
+                        android:textColor="@color/white" />
+                </LinearLayout>
+
+                <ProgressBar
+                    android:id="@+id/helpProgress"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="center_horizontal"
+                    android:layout_marginTop="12dp"
+                    android:visibility="gone" />
+
+                <TextView
+                    android:id="@+id/tvHelpBody"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text=""
+                    android:textSize="13sp"
+                    android:alpha="0.9"
+                    android:layout_marginTop="12dp" />
+
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
+        <!-- Logout / Back -->
+        <Button
+            android:id="@+id/btnLogout"
+            android:layout_width="match_parent"
+            android:layout_height="52dp"
+            android:layout_marginTop="16dp"
+            android:text="Odjava"
+            android:textAllCaps="false"
+            android:background="@drawable/button_outline_active"
+            android:textColor="@color/white" />
+
+        <Button
+            android:id="@+id/btnBack"
+            android:layout_width="match_parent"
+            android:layout_height="52dp"
+            android:layout_marginTop="10dp"
+            android:text="Nazad"
+            android:textAllCaps="false"
+            android:background="@drawable/button_outline_active"
+            android:textColor="@color/white" />
+
+    </LinearLayout>
+</ScrollView>

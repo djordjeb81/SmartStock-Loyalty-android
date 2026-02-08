@@ -1,0 +1,250 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:background="#FFFFFF">
+
+    <!-- HEADER -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:paddingStart="16dp"
+        android:paddingEnd="16dp"
+        android:paddingTop="10dp"
+        android:paddingBottom="10dp"
+        android:orientation="horizontal"
+        android:gravity="center_vertical">
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:orientation="vertical">
+
+            <TextView
+                android:id="@+id/tvName"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Ime Prezime"
+                android:textStyle="bold"
+                android:textSize="18sp"
+                android:textColor="@color/brand_blue" />
+
+            <TextView
+                android:id="@+id/tvMemberNoBig"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="00000"
+                android:textStyle="bold"
+                android:textSize="22sp"
+                android:layout_marginTop="2dp"
+                android:textColor="#111111" />
+        </LinearLayout>
+
+        <ImageButton
+            android:id="@+id/btnSettings"
+            android:layout_width="44dp"
+            android:layout_height="44dp"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:contentDescription="Podešavanja"
+            android:padding="10dp"
+            app:srcCompat="@android:drawable/ic_menu_manage"
+            app:tint="@color/brand_blue" />
+    </LinearLayout>
+
+    <!-- TABS -->
+    <com.google.android.material.tabs.TabLayout
+        android:id="@+id/tabMain"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        app:tabIndicatorFullWidth="false"
+        app:tabMode="fixed" />
+
+    <!-- CONTENT -->
+    <FrameLayout
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1">
+
+        <!-- KVARTALI -->
+        <ScrollView
+            android:id="@+id/viewQuarters"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:fillViewport="true"
+            android:padding="16dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical">
+
+                <!-- Toggle: Trenutni / Prethodni -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center"
+                    android:layout_marginBottom="14dp">
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btnCurrent"
+                        style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                        android:layout_width="0dp"
+                        android:layout_height="48dp"
+                        android:layout_weight="1"
+                        android:text="Trenutni"
+                        android:textAllCaps="false" />
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btnPrevious"
+                        style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                        android:layout_width="0dp"
+                        android:layout_height="48dp"
+                        android:layout_weight="1"
+                        android:layout_marginStart="10dp"
+                        android:text="Prethodni"
+                        android:textAllCaps="false" />
+                </LinearLayout>
+
+                <!-- TOP: ZA ISPLATU -->
+                <com.google.android.material.card.MaterialCardView
+                    android:id="@+id/blockCurrentBonus"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    app:cardUseCompatPadding="true"
+                    android:layout_marginBottom="12dp">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:padding="16dp"
+                        android:orientation="vertical">
+
+                        <TextView
+                            android:id="@+id/tvCurrentBonusValue"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:text="0 RSD"
+                            android:textStyle="bold"
+                            android:textSize="30sp"
+                            android:textColor="@color/brand_blue" />
+
+                        <TextView
+                            android:id="@+id/tvCurrentBonusLabel"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:text="ZA ISPLATU"
+                            android:textStyle="bold"
+                            android:textSize="13sp"
+                            android:layout_marginTop="4dp"
+                            android:alpha="0.9" />
+
+                        <TextView
+                            android:id="@+id/tvCurrentBonusHint"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:text="Procena za trenutni kvartal. Iznos se može promeniti do završetka obračuna."
+                            android:textSize="12sp"
+                            android:layout_marginTop="6dp"
+                            android:alpha="0.7" />
+
+                    </LinearLayout>
+                </com.google.android.material.card.MaterialCardView>
+
+                <!-- SPECIFIKACIJA (tačno po listi) -->
+                <com.google.android.material.card.MaterialCardView
+                    android:id="@+id/cardSpec"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    app:cardUseCompatPadding="true">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:padding="16dp"
+                        android:orientation="vertical">
+
+                        <TextView
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:text="Detalji obračuna"
+                            android:textStyle="bold"
+                            android:textColor="@color/brand_blue"
+                            android:textSize="16sp"
+                            android:layout_marginBottom="10dp" />
+
+                        <include
+                            android:id="@+id/specRow0"
+                            layout="@layout/row_spec_item" />
+
+                        <include
+                            android:id="@+id/specRow1"
+                            layout="@layout/row_spec_item" />
+
+                        <include
+                            android:id="@+id/specRow2"
+                            layout="@layout/row_spec_item" />
+
+                        <include
+                            android:id="@+id/specRow3"
+                            layout="@layout/row_spec_item" />
+
+                        <include
+                            android:id="@+id/specRow4"
+                            layout="@layout/row_spec_item" />
+
+                        <include
+                            android:id="@+id/specRow5"
+                            layout="@layout/row_spec_item" />
+
+                        <include
+                            android:id="@+id/specRow6"
+                            layout="@layout/row_spec_item" />
+
+                        <include
+                            android:id="@+id/specRow7"
+                            layout="@layout/row_spec_item" />
+
+                        <include
+                            android:id="@+id/specRow8"
+                            layout="@layout/row_spec_item" />
+
+                    </LinearLayout>
+                </com.google.android.material.card.MaterialCardView>
+
+            </LinearLayout>
+        </ScrollView>
+
+        <!-- ISPLATE -->
+        <LinearLayout
+            android:id="@+id/viewPayouts"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:orientation="vertical"
+            android:padding="16dp"
+            android:visibility="gone">
+
+            <TextView
+                android:id="@+id/tvNoPayouts"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Trenutno nema isplata."
+                android:gravity="center"
+                android:alpha="0.75"
+                android:layout_marginTop="30dp"
+                android:visibility="gone" />
+
+            <androidx.recyclerview.widget.RecyclerView
+                android:id="@+id/rvPayouts"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:overScrollMode="never" />
+        </LinearLayout>
+
+    </FrameLayout>
+
+</LinearLayout>
