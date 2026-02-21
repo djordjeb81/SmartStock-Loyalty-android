@@ -134,6 +134,17 @@
                             android:textColor="@color/brand_blue" />
 
                         <TextView
+                            android:id="@+id/tvCurrentPercent"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:text="Trenutni procenat: 0%"
+                            android:textStyle="bold"
+                            android:textSize="13sp"
+                            android:layout_marginTop="6dp"
+                            android:alpha="0.85"
+                            android:textColor="#111111" />
+
+                        <TextView
                             android:id="@+id/tvCurrentBonusLabel"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
@@ -211,6 +222,10 @@
 
                         <include
                             android:id="@+id/specRow8"
+                            layout="@layout/row_spec_item" />
+
+                        <include
+                            android:id="@+id/specRow9"
                             layout="@layout/row_spec_item" />
 
                     </LinearLayout>

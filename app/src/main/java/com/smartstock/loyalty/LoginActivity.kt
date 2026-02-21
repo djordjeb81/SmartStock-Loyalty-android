@@ -420,8 +420,28 @@ class LoginActivity : AppCompatActivity() {
         val currency = loyalty.optString("currency", "RSD")
         val currentPercent = loyalty.optDouble("currentPercent", 0.0)
 
-        val currentQuarter = parseQuarterSnapshot(loyalty.optJSONObject("currentQuarter"))
-        val previousQuarter = parseQuarterSnapshot(loyalty.optJSONObject("previousQuarter"))
+        var currentQuarter = parseQuarterSnapshot(loyalty.optJSONObject("currentQuarter"))
+        var previousQuarter = parseQuarterSnapshot(loyalty.optJSONObject("previousQuarter"))
+
+// ✅ 1) pogledaj finalQuarter blok (ako postoji)
+        val finalObj = loyalty.optJSONObject("finalQuarter")
+        if (finalObj != null) {
+            val fy = finalObj.optInt("year", 0)
+            val fq = finalObj.optInt("quarter", 0)
+            val fAt = finalObj.optString("finalizedAt", null)
+
+            if (fy > 0 && fq in 1..4 && !fAt.isNullOrBlank()) {
+                // ✅ 2) odluči da li ide u current ili previous
+                if (currentQuarter.year == fy && currentQuarter.quarter == fq) {
+                    currentQuarter = currentQuarter.copy(finalized = true, finalizedAt = fAt)
+                } else if (previousQuarter.year == fy && previousQuarter.quarter == fq) {
+                    previousQuarter = previousQuarter.copy(finalized = true, finalizedAt = fAt)
+                }
+                // ✅ 3) ako ne matchuje ni jedan -> “izlazi iz okvira”
+                // ne diramo toggle snapshot-e; to ostaje za istoriju/potencijal kvartale
+            }
+        }
+
 
         val totalsObj = loyalty.optJSONObject("totals") ?: JSONObject()
         val totals = LoyaltyStore.Totals(
@@ -553,7 +573,10 @@ class LoginActivity : AppCompatActivity() {
 
             // ✅ upisujemo oba:
             purchaseDetails = pd,
-            returnsDetails = rd
+                returnsDetails = rd,
+
+            finalized = o.optBoolean("finalized", false),
+            finalizedAt = o.optString("finalizedAt", null)
         )
     }
 

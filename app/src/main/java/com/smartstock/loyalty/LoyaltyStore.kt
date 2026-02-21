@@ -7,7 +7,7 @@ package com.smartstock.loyalty
  */
 object LoyaltyStore {
 
-    const val CURRENT_SCHEMA = 3
+    const val CURRENT_SCHEMA = 4
 
     data class UserInfo(
         val id: String = "",
@@ -68,9 +68,13 @@ object LoyaltyStore {
         val pointsNet: Double = 0.0,
         val pointsAfterFee: Double = 0.0,
 
-        // ✅ bitno: oba bloka
         val purchaseDetails: PurchaseDetails = PurchaseDetails(),
-        val returnsDetails: ReturnsDetails = ReturnsDetails()
+        val returnsDetails: ReturnsDetails = ReturnsDetails(),
+
+// ✅ schema v4
+        val finalized: Boolean = false,
+        val finalizedAt: String? = null
+
     )
 
     data class Totals(

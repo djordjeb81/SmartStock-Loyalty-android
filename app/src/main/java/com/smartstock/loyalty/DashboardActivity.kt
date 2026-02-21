@@ -12,14 +12,21 @@ import com.google.android.material.tabs.TabLayout
 import com.smartstock.loyalty.databinding.ActivityDashboardBinding
 import com.smartstock.loyalty.databinding.RowSpecItemBinding
 import java.text.DecimalFormat
+import java.time.LocalDate
 
 class DashboardActivity : AppCompatActivity() {
 
     private lateinit var b: ActivityDashboardBinding
     private val dfMoney = DecimalFormat("#,##0")
     private val dfPoints = DecimalFormat("#,##0.00")
+    private val dfPercent = DecimalFormat("0.##")
+    private fun fmtPercent(p: Double): String = "${dfPercent.format(p)}%"
 
     private lateinit var payoutsAdapter: PayoutsAdapter
+
+    // ✅ sačuvaj default boje (tema/dark-mode friendly)
+    private var defaultValueColor: Int = 0
+    private var defaultLabelColor: Int = 0
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -28,6 +35,10 @@ class DashboardActivity : AppCompatActivity() {
 
         b = ActivityDashboardBinding.inflate(layoutInflater)
         setContentView(b.root)
+
+        // ✅ uhvati default boje pre nego što ih menjamo
+        defaultValueColor = b.tvCurrentBonusValue.currentTextColor
+        defaultLabelColor = b.tvCurrentBonusLabel.currentTextColor
 
         applySystemInsets()
 
@@ -95,34 +106,128 @@ class DashboardActivity : AppCompatActivity() {
         b.btnPrevious.alpha = if (!isCurrent) 1f else 0.6f
     }
 
+    // ---------------- Payout math (PAID sum by quarter) ----------------
+
+    private fun quarterOf(d: LocalDate): Int = ((d.monthValue - 1) / 3) + 1
+
+    private fun tryParseDate(s: String?): LocalDate? {
+        if (s.isNullOrBlank()) return null
+        return try { LocalDate.parse(s.trim()) } catch (_: Exception) { null }
+    }
+
+    private fun isFinal(q: LoyaltyStore.QuarterSnapshot): Boolean =
+        q.finalized || !q.finalizedAt.isNullOrBlank()
+
+    private fun formatFinalDate(iso: String?): String? {
+        if (iso.isNullOrBlank()) return null
+        return try {
+            java.time.OffsetDateTime.parse(iso)
+                .toLocalDate()
+                .format(java.time.format.DateTimeFormatter.ofPattern("dd.MM.yyyy"))
+        } catch (_: Exception) {
+            iso.take(10)
+        }
+    }
+
+    /** SUM(PAID) samo za dati year/quarter (na osnovu payout.date) */
+    private fun sumPaidForQuarter(year: Int, quarter: Int): Double {
+        if (year <= 0 || quarter !in 1..4) return 0.0
+
+        return LoyaltyStore.payouts
+            .asSequence()
+            .filter { (it.status ?: "").trim().equals("PAID", ignoreCase = true) }
+            .mapNotNull { p ->
+                val d = tryParseDate(p.date)
+                if (d == null) null else Pair(d, p.amount)
+            }
+            .filter { (d, _) -> d.year == year && quarterOf(d) == quarter }
+            .sumOf { it.second }
+    }
+
     private fun bindQuarter(isCurrent: Boolean) {
         val q = if (isCurrent) LoyaltyStore.currentQuarter else LoyaltyStore.previousQuarter
 
-        // ✅ Current: globalni balans (za isplatu "do sada")
-        // ✅ Previous: vrednost iz prethodnog kvartala (npr. pointsAfterFee)
-        val payoutAmount = if (isCurrent) {
-            LoyaltyStore.totals.balance
-        } else {
-            q.pointsAfterFee
+        val y = q.year
+        val qu = q.quarter
+
+        // ✅ zbir PAID isplata za taj kvartal
+        val paidSum = sumPaidForQuarter(y, qu)
+
+        val final = isFinal(q)
+
+        val shownPercent =
+            if (q.percent > 0.0) q.percent
+            else LoyaltyStore.currentPercent
+
+        b.tvCurrentPercent.text =
+            if (isCurrent) "Trenutni procenat: ${fmtPercent(shownPercent)}"
+            else "Procenat: ${fmtPercent(shownPercent)}"
+
+        // ✅ history zapis za isti kvartal (u "quarters" listi)
+        val hist = LoyaltyStore.quarters.firstOrNull {
+            it.year == q.year && it.quarter == q.quarter
         }
 
-        b.tvCurrentBonusValue.text = "${dfPoints.format(payoutAmount)} ${LoyaltyStore.currency}"
-        b.tvCurrentBonusLabel.text = if (isCurrent) "ZA ISPLATU" else "UKUPNO (prethodni)"
-        b.tvCurrentBonusHint.text =
-            if (isCurrent) {
-                "Procena za trenutni kvartal. Iznos se može promeniti do završetka obračuna."
+        // ✅ baza za isplatu:
+        // - POTENCIJAL: snapshot pointsAfterFee (već umanjeno za članarinu)
+        // - FINAL: finalPoints - članarina (jer finalPoints je "sirovo", članarina se skida ovde)
+        val baseForPayout =
+            if (final) {
+                val fp = hist?.finalPoints ?: 0.0
+                (fp - q.membershipFeeRsd).coerceAtLeast(0.0)
             } else {
-                "Pregled prethodnog kvartala."
+                q.pointsAfterFee
             }
 
-        bindSpecification(q, payoutAmount)
+        // ✅ konačno za isplatu = baza - isplaćeno (PAID)
+        val payoutAmount = (baseForPayout - paidSum).coerceAtLeast(0.0)
+
+        b.tvCurrentBonusValue.text = "${dfPoints.format(payoutAmount)} ${LoyaltyStore.currency}"
+
+        val finAt = formatFinalDate(q.finalizedAt)
+
+        b.tvCurrentBonusLabel.text =
+            if (isCurrent) {
+                if (final) "KONAČNO ZA ISPLATU" else "ZA ISPLATU"
+            } else {
+                "UKUPNO (prethodni)"
+            }
+
+        b.tvCurrentBonusHint.text =
+            if (final) {
+                "FINAL (finalizovano: ${finAt ?: "—"}) • Iznos je umanjen za članarinu i sve isplate za ovaj kvartal."
+            } else {
+                "Iznos je umanjen za članarinu i sve isplate za ovaj kvartal."
+            }
+
+        // ✅ BOJA kada je FINAL (čuva default iz teme)
+        b.tvCurrentBonusValue.setTextColor(
+            if (final) getColor(android.R.color.holo_green_dark) else defaultValueColor
+        )
+        b.tvCurrentBonusLabel.setTextColor(
+            if (final) getColor(android.R.color.holo_green_light) else defaultLabelColor
+        )
+
+        bindSpecification(q, payoutAmount, paidSum, final, hist)
     }
 
-    private fun bindSpecification(q: LoyaltyStore.QuarterSnapshot, payoutAmount: Double) {
+    private fun bindSpecification(
+        q: LoyaltyStore.QuarterSnapshot,
+        payoutAmount: Double,
+        paidSum: Double,
+        isFinal: Boolean,
+        hist: LoyaltyStore.QuarterHistory?
+    ) {
 
         fun setRow(row: RowSpecItemBinding, label: String, value: Double) {
             row.tvLabel.text = label
             row.tvValue.text = "${dfMoney.format(value)} ${LoyaltyStore.currency}"
+            row.root.visibility = android.view.View.VISIBLE
+        }
+
+        fun setRowText(row: RowSpecItemBinding, label: String, value: String) {
+            row.tvLabel.text = label
+            row.tvValue.text = value
             row.root.visibility = android.view.View.VISIBLE
         }
 
@@ -131,41 +236,56 @@ class DashboardActivity : AppCompatActivity() {
 
         // ✅ NETO povrati (da ne duplira):
         // - kasa: bruto - pairedKasaRsd
-        // - otpremnica: bruto - deletedOtRsd
+        // - otpremnica: bruto (da se vidi deleted OT trag)
         val vraceniKasa = (rd.kasaRsd - rd.pairedKasaRsd).coerceAtLeast(0.0)
-        val vraceniOtpremnica = rd.otRsd // ✅ prikaži bruto kao ranije
+        val vraceniOtpremnica = rd.otRsd
 
-        // 1) Ukupno kupljeno (tačno iz purchaseDetails)
+        // 1) Ukupno kupljeno
         val ukupnoKupljeno = if (pd.allRsd > 0.0) pd.allRsd else q.purchasedRsd
 
-        // 2-3) Ne podleže loyalty (A / black list) -> iz purchaseDetails
+        // 2-3) Ne podleže loyalty
         val nePodlezeA = pd.markerARsd
         val nePodlezeBlacklist = pd.blacklistRsd
 
-        // 6) Ukupna vrednost vraćene robe
-        val ukupnoVraceno = if (rd.allRsd > 0.0) rd.allRsd else q.returnedRsd
-
-        // 7) Osnovica (tačno iz purchaseDetails, ne iz pointsNet/percent)
+        // 7) Osnovica (kontrolno iz snapshot-a)
         val osnovicaZaLoyalty =
             if (pd.eligibleNetRsd > 0.0) pd.eligibleNetRsd
             else if (pd.eligibleRsd > 0.0) pd.eligibleRsd
             else 0.0
 
-        // 8) Članarina
+        // članarina
         val clanarina = q.membershipFeeRsd
 
-        // 9) Za isplatu
+        // ✅ (opc.) kada je FINAL, možeš prikazati "Konačno posle članarine" iz history finalPoints
+        // Ako ne želiš, slobodno ignoriši - ovo ne menja izračun "Za isplatu".
+        val finalAfterFeeShown =
+            if (isFinal) {
+                val fp = hist?.finalPoints ?: 0.0
+                (fp - clanarina).coerceAtLeast(0.0)
+            } else {
+                0.0
+            }
+
+        // Za isplatu (krajnje)
         val zaIsplatu = payoutAmount
 
-        setRow(b.specRow0, "Ukupno kupljeno", ukupnoKupljeno)
-        setRow(b.specRow1, "Ne podleže loyalty programu (A)", nePodlezeA)
-        setRow(b.specRow2, "Ne podleže loyalty programu (black list)", nePodlezeBlacklist)
-        setRow(b.specRow3, "Vraćeni artikli (kasa)", vraceniKasa)
-        setRow(b.specRow4, "Vraćeni artikli (otpremnica)", vraceniOtpremnica)
-        setRow(b.specRow5, "Ukupna vrednost vraćene robe", ukupnoVraceno)
-        setRow(b.specRow6, "Ukupna suma na koju se primenjuje loyalty", osnovicaZaLoyalty)
-        setRow(b.specRow7, "Članarina", clanarina)
-        setRow(b.specRow8, "Za isplatu", zaIsplatu)
+        val percentValue =
+            if (q.percent > 0.0) q.percent
+            else LoyaltyStore.currentPercent
+
+        setRowText(b.specRow0, "Procenat", fmtPercent(percentValue))
+
+        setRow(b.specRow1, "Ukupno kupljeno", ukupnoKupljeno)
+        setRow(b.specRow2, "Ne podleže loyalty programu (A)", nePodlezeA)
+        setRow(b.specRow3, "Ne podleže loyalty programu (black list)", nePodlezeBlacklist)
+        setRow(b.specRow4, "Vraćeni artikli (kasa)", vraceniKasa)
+        setRow(b.specRow5, "Vraćeni artikli (otpremnica)", vraceniOtpremnica)
+
+        setRow(b.specRow6, "Isplaćeno ukupno (PAID)", paidSum)
+
+        setRow(b.specRow7, "Ukupna suma na koju se primenjuje loyalty", osnovicaZaLoyalty)
+        setRow(b.specRow8, "Članarina", clanarina)
+        setRow(b.specRow9, "Za isplatu", zaIsplatu)
     }
 
     private fun setupPayoutsList() {
