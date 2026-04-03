@@ -92,7 +92,7 @@
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
 
-        <!-- Uputstvo / FAQ -->
+        <!-- Opširno uputstvo (PDF) -->
         <com.google.android.material.card.MaterialCardView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -104,6 +104,44 @@
                 android:layout_height="wrap_content"
                 android:padding="16dp"
                 android:orientation="vertical">
+
+
+
+
+               <ProgressBar
+                    android:id="@+id/manualProgress"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="center_horizontal"
+                    android:layout_marginTop="12dp"
+                    android:visibility="gone" />
+
+                <Button
+                    android:id="@+id/btnManualPdf"
+                    android:layout_width="match_parent"
+                    android:layout_height="52dp"
+                    android:layout_marginTop="14dp"
+                    android:text="Uputstvo"
+                    android:textAllCaps="false"
+                    android:background="@drawable/button_outline_active"
+                    android:textColor="@color/white" />
+
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
+        <!-- Uputstvo / FAQ -->
+        <com.google.android.material.card.MaterialCardView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            app:cardUseCompatPadding="true"
+            android:layout_marginTop="14dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:padding="16dp"
+                android:orientation="vertical"
+                android:paddingBottom="12dp">>
 
                 <TextView
                     android:layout_width="match_parent"
@@ -192,6 +230,8 @@
             android:textAllCaps="false"
             android:background="@drawable/button_outline_active"
             android:textColor="@color/white" />
+
+
 
     </LinearLayout>
 </ScrollView>

@@ -6,11 +6,14 @@ import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
 import org.json.JSONObject
+import java.io.File
 
 /**
  * Specijalni izuzetak koji koristimo za jasne poruke u UI-u.
  */
 class UserNotFoundException(message: String) : RuntimeException(message)
+
+
 
 object DropboxJsonClient {
 
@@ -56,6 +59,46 @@ object DropboxJsonClient {
     fun downloadJsonByPath(path: String): String = downloadTextByPath(path)
 
     /**
+     * Skida binarni fajl sa Dropbox-a i upisuje ga u targetFile.
+     * Koristi se za PDF uputstvo.
+     */
+    fun downloadFileByPath(path: String, targetFile: File) {
+        val accessToken = DropboxAuth.getAccessToken()
+
+        val arg = JSONObject().put("path", path).toString()
+        val emptyBody = ByteArray(0).toRequestBody("application/octet-stream".toMediaType())
+
+        val req = Request.Builder()
+            .url("https://content.dropboxapi.com/2/files/download")
+            .post(emptyBody)
+            .addHeader("Authorization", "Bearer $accessToken")
+            .addHeader("Dropbox-API-Arg", arg)
+            .build()
+
+        targetFile.parentFile?.mkdirs()
+
+        http.newCall(req).execute().use { resp ->
+            if (!resp.isSuccessful) {
+                val body = resp.body?.string().orEmpty()
+                val msg = extractDropboxErrorSummary(body)
+
+                if (msg.contains("path/not_found", ignoreCase = true) ||
+                    msg.contains("not_found", ignoreCase = true)
+                ) {
+                    throw UserNotFoundException("PDF fajl ne postoji na Dropbox-u.")
+                }
+
+                throw RuntimeException("Dropbox greška: HTTP ${resp.code} ${msg.ifBlank { body }}")
+            }
+
+            val body = resp.body ?: throw RuntimeException("Dropbox odgovor nema sadržaj.")
+            targetFile.outputStream().use { out ->
+                body.byteStream().copyTo(out)
+            }
+        }
+    }
+
+    /**
      * Očekujemo user fajl na: /Loyalty/users/<emailLower>.json
      */
     fun pathForEmail(email: String): String {
@@ -78,6 +121,35 @@ object DropboxJsonClient {
             "isplate" -> "/Loyalty/help/isplate.txt"
             else -> "/Loyalty/help/opste.txt"
         }
+    }
+
+    /**
+     * Manifest za opširno PDF uputstvo.
+     * Primer fajla na Dropbox-u:
+     *
+     * /Loyalty/manual/manual_manifest.json
+     *
+     * {
+     *   "version": 3,
+     *   "fileName": "uputstvo_loyalty_v3.pdf",
+     *   "pdfPath": "/Loyalty/manual/uputstvo_loyalty_v3.pdf",
+     *   "title": "Opširno uputstvo"
+     * }
+     */
+    fun pathForManualManifest(): String {
+        return "/Loyalty/manual/manual_manifest.json"
+    }
+
+    fun downloadManualManifest(): ManualManifestDto {
+        val text = downloadTextByPath(pathForManualManifest())
+        val json = JSONObject(text)
+
+        return ManualManifestDto(
+            version = json.optInt("version", 0),
+            fileName = json.optString("fileName", "uputstvo.pdf"),
+            pdfPath = json.optString("pdfPath", "/Loyalty/manual/uputstvo.pdf"),
+            title = json.optString("title", "Uputstvo")
+        )
     }
 
     private fun extractDropboxErrorSummary(body: String): String {

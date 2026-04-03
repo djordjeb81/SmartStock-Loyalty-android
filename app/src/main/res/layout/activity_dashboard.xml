@@ -228,6 +228,10 @@
                             android:id="@+id/specRow9"
                             layout="@layout/row_spec_item" />
 
+                        <include
+                            android:id="@+id/specRow10"
+                            layout="@layout/row_spec_item" />
+
                     </LinearLayout>
                 </com.google.android.material.card.MaterialCardView>
 

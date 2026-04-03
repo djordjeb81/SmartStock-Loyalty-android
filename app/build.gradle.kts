@@ -26,6 +26,12 @@ android {
             )
         }
     }
+    applicationVariants.all {
+        outputs.all {
+            val output = this as com.android.build.gradle.internal.api.BaseVariantOutputImpl
+            output.outputFileName = "SmartStockLoyalty-v${versionName}.apk"
+        }
+    }
 
     buildFeatures {
         viewBinding = true
@@ -52,4 +58,5 @@ dependencies {
     androidTestImplementation(libs.androidx.espresso.core)
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
     implementation("androidx.biometric:biometric:1.1.0")
+    implementation("com.github.mhiew:android-pdf-viewer:3.2.0-beta.3")
 }

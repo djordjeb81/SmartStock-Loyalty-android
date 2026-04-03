@@ -14,6 +14,9 @@ import com.smartstock.loyalty.databinding.ActivitySettingsBinding
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import android.content.Intent
+import android.widget.Toast
+import java.io.File
 
 class SettingsActivity : AppCompatActivity() {
 
@@ -29,13 +32,25 @@ class SettingsActivity : AppCompatActivity() {
         b = ActivitySettingsBinding.inflate(layoutInflater)
         setContentView(b.root)
 
+        val base = (16 * resources.displayMetrics.density).toInt()
+        val bottomExtra = (24 * resources.displayMetrics.density).toInt()
+
         ViewCompat.setOnApplyWindowInsetsListener(b.root) { _, insets ->
             val sys = insets.getInsets(WindowInsetsCompat.Type.systemBars())
-            b.root.setPadding(sys.left, sys.top, sys.right, sys.bottom)
+            b.root.setPadding(
+                base + sys.left,
+                base + sys.top,
+                base + sys.right,
+                base + sys.bottom + bottomExtra
+            )
             insets
         }
 
         b.btnBack.setOnClickListener { finish() }
+
+        b.btnManualPdf.setOnClickListener {
+            openManualPdf()
+        }
 
         b.btnClearSavedEmail.setOnClickListener {
             SettingsPrefs.clearLastEmail(this)
@@ -156,6 +171,48 @@ class SettingsActivity : AppCompatActivity() {
                 setSwitchSilently(false)
             }
             .show()
+    }
+    private fun openManualPdf() {
+        b.manualProgress.visibility = View.VISIBLE
+        b.btnManualPdf.isEnabled = false
+
+        lifecycleScope.launch {
+            try {
+                val manifest = withContext(Dispatchers.IO) {
+                    DropboxJsonClient.downloadManualManifest()
+                }
+
+                val localFile = File(filesDir, "manuals/${manifest.fileName}")
+                val localVersion = ManualPrefs.getVersion(this@SettingsActivity)
+
+                val shouldDownload = !localFile.exists() || manifest.version > localVersion
+
+                if (shouldDownload) {
+                    withContext(Dispatchers.IO) {
+                        DropboxJsonClient.downloadFileByPath(manifest.pdfPath, localFile)
+                    }
+
+                    ManualPrefs.setVersion(this@SettingsActivity, manifest.version)
+                    ManualPrefs.setFileName(this@SettingsActivity, manifest.fileName)
+                }
+
+                val intent = Intent(this@SettingsActivity, PdfViewerActivity::class.java).apply {
+                    putExtra(PdfViewerActivity.EXTRA_FILE_PATH, localFile.absolutePath)
+                    putExtra(PdfViewerActivity.EXTRA_TITLE, manifest.title)
+                }
+                startActivity(intent)
+
+            } catch (e: Exception) {
+                Toast.makeText(
+                    this@SettingsActivity,
+                    "Ne mogu da otvorim uputstvo: ${e.message}",
+                    Toast.LENGTH_LONG
+                ).show()
+            } finally {
+                b.manualProgress.visibility = View.GONE
+                b.btnManualPdf.isEnabled = true
+            }
+        }
     }
 
     private fun confirmBiometricThenEnable(email: String) {
