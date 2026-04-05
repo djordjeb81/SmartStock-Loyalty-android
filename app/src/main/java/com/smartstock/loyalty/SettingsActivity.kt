@@ -62,6 +62,20 @@ class SettingsActivity : AppCompatActivity() {
                 .show()
         }
 
+        b.btnPickUsersSource.setOnClickListener {
+            chooseUsersSource()
+        }
+
+        b.btnClearUsersSource.setOnClickListener {
+            SettingsPrefs.clearSelectedUsersSource(this)
+            refreshUi()
+            AlertDialog.Builder(this)
+                .setTitle("Obrisano")
+                .setMessage("Izbor firme je obrisan.")
+                .setPositiveButton("OK", null)
+                .show()
+        }
+
         b.swQuickUnlock.setOnCheckedChangeListener { _, isChecked ->
             if (suppressSwitchCallback) return@setOnCheckedChangeListener
 
@@ -172,6 +186,67 @@ class SettingsActivity : AppCompatActivity() {
             }
             .show()
     }
+    private fun chooseUsersSource() {
+        lifecycleScope.launch {
+            try {
+                val items = withContext(Dispatchers.IO) {
+                    DropboxJsonClient.listUserSources()
+                }
+
+                if (items.isEmpty()) {
+                    AlertDialog.Builder(this@SettingsActivity)
+                        .setTitle("Nema firmi")
+                        .setMessage("Na Dropbox-u nije pronađen nijedan users folder.")
+                        .setPositiveButton("OK", null)
+                        .show()
+                    return@launch
+                }
+
+                val labels = items.map { it.label }.toTypedArray()
+
+                AlertDialog.Builder(this@SettingsActivity)
+                    .setTitle("Izaberi firmu")
+                    .setItems(labels) { _, which ->
+                        val picked = items[which]
+
+                        val oldFolder = SettingsPrefs.getSelectedUsersFolder(this@SettingsActivity)
+                        val newFolder = picked.usersFolder
+                        val changed = oldFolder.isNotBlank() && oldFolder != newFolder
+
+                        SettingsPrefs.setPendingUsersLabel(this@SettingsActivity, picked.label)
+                        SettingsPrefs.setPendingUsersFolder(this@SettingsActivity, picked.usersFolder)
+
+                        if (changed) {
+                            LoyaltyStore.clear()
+                            SettingsPrefs.setQuickUnlockEnabled(this@SettingsActivity, false)
+                            SettingsPrefs.clearLastEmail(this@SettingsActivity)
+                        }
+
+                        refreshUi()
+
+                        Toast.makeText(
+                            this@SettingsActivity,
+                            "Izabrana firma: ${picked.label}",
+                            Toast.LENGTH_SHORT
+                        ).show()
+
+                        val intent = Intent(this@SettingsActivity, LoginActivity::class.java).apply {
+                            addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_NEW_TASK)
+                        }
+                        startActivity(intent)
+                        finish()
+                    }
+                    .setNegativeButton("Otkaži", null)
+                    .show()
+            } catch (e: Exception) {
+                AlertDialog.Builder(this@SettingsActivity)
+                    .setTitle("Greška")
+                    .setMessage("Ne mogu da učitam listu firmi: ${e.message}")
+                    .setPositiveButton("OK", null)
+                    .show()
+            }
+        }
+    }
     private fun openManualPdf() {
         b.manualProgress.visibility = View.VISIBLE
         b.btnManualPdf.isEnabled = false
@@ -247,12 +322,34 @@ class SettingsActivity : AppCompatActivity() {
         val enabled = SettingsPrefs.isQuickUnlockEnabled(this)
         val email = SettingsPrefs.getLastEmail(this)
 
+        val pendingLabel = SettingsPrefs.getPendingUsersLabel(this)
+        val pendingFolder = SettingsPrefs.getPendingUsersFolder(this)
+
+        val usersLabel = if (pendingLabel.isNotBlank()) {
+            pendingLabel
+        } else {
+            SettingsPrefs.getSelectedUsersLabel(this)
+        }
+
+        val usersFolder = if (pendingFolder.isNotBlank()) {
+            pendingFolder
+        } else {
+            SettingsPrefs.getSelectedUsersFolder(this)
+        }
+
         setSwitchSilently(enabled)
 
         b.tvQuickUnlockState.text = if (enabled) {
             "Status: uključeno (${email.ifBlank { "—" }})"
         } else {
             "Status: isključeno"
+        }
+
+        b.tvUsersSourceState.text = if (usersLabel.isBlank() || usersFolder.isBlank()) {
+            "Trenutno: nije izabrano"
+        } else {
+            val suffix = if (pendingFolder.isNotBlank()) " (čeka prijavu)" else ""
+            "Trenutno: $usersLabel$suffix\nFolder: $usersFolder"
         }
     }
 

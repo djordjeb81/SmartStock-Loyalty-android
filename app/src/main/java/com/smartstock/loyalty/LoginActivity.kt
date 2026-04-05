@@ -29,6 +29,7 @@ class LoginActivity : AppCompatActivity() {
 
     // da ne iskače više puta u istom prikazu
     private var phoneUnlockPromptShown = false
+    private var firstSetupRedirectShown = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -46,6 +47,9 @@ class LoginActivity : AppCompatActivity() {
         }
 
         b.btnLogin.setOnClickListener { attemptLogin() }
+        b.btnPickCompany.setOnClickListener {
+            startActivity(Intent(this, SettingsActivity::class.java))
+        }
 
         b.etPin.setOnEditorActionListener { _, actionId, _ ->
             if (actionId == EditorInfo.IME_ACTION_DONE) {
@@ -55,10 +59,22 @@ class LoginActivity : AppCompatActivity() {
         }
 
         updateLockUi()
+        refreshSelectedCompanyUi()
+        updateLockUi()
     }
 
     override fun onStart() {
         super.onStart()
+
+        refreshSelectedCompanyUi()
+        refreshCompanyPickUi()
+
+        if (!ensureUsersSourceSelected()) {
+            b.btnLogin.isEnabled = false
+            b.tvLoginStatus.text = "Prvo izaberite firmu."
+            return
+        }
+
         updateLockUi()
         maybeStartPhoneUnlock()
     }
@@ -71,6 +87,16 @@ class LoginActivity : AppCompatActivity() {
 
     override fun onResume() {
         super.onResume()
+
+        refreshSelectedCompanyUi()
+        refreshCompanyPickUi()
+
+        if (!ensureUsersSourceSelected()) {
+            b.btnLogin.isEnabled = false
+            b.tvLoginStatus.text = "Prvo izaberite firmu."
+            return
+        }
+
         updateLockUi()
         maybeStartPhoneUnlock()
     }
@@ -120,14 +146,15 @@ class LoginActivity : AppCompatActivity() {
 
         lifecycleScope.launch {
             try {
-                val path = DropboxJsonClient.pathForEmail(email)
+                val selectedFolder = SettingsPrefs.getSelectedUsersFolder(this@LoginActivity)
+                val path = if (selectedFolder.isNotBlank()) {
+                    DropboxJsonClient.pathForEmail(email, selectedFolder)
+                } else {
+                    DropboxJsonClient.pathForEmail(email) // fallback na staru logiku
+                }
 
-                val jsonText = try {
-                    withContext(Dispatchers.IO) { DropboxJsonClient.downloadJsonByPath(path) }
-                } catch (ex: Exception) {
-                    val cached = UserJsonCache.loadJson(this@LoginActivity, email)
-                    if (cached.isNullOrBlank()) throw ex
-                    cached
+                val jsonText = withContext(Dispatchers.IO) {
+                    DropboxJsonClient.downloadJsonByPath(path)
                 }
 
                 saveCache(email, jsonText)
@@ -139,6 +166,7 @@ class LoginActivity : AppCompatActivity() {
                 when (result) {
                     is VerifyStatusResult.Success -> {
                         applyStore(result.store)
+                        SettingsPrefs.commitPendingUsersSource(this@LoginActivity)
                         goDashboard()
                     }
                     is VerifyStatusResult.FailMessage -> {
@@ -147,10 +175,23 @@ class LoginActivity : AppCompatActivity() {
                     }
                 }
             } catch (e: Exception) {
-                b.tvLoginStatus.text = when (e) {
-                    is UserNotFoundException -> e.message ?: "Ne postoji nalog za ovaj email."
-                    else -> "Ne mogu da učitam nalog. (${e.message ?: "greška"})"
+                if (e is UserNotFoundException) {
+                    SettingsPrefs.clearPendingUsersSource(this@LoginActivity)
+
+                    AlertDialog.Builder(this@LoginActivity)
+                        .setTitle("Pogrešna firma")
+                        .setMessage("U izabranoj firmi ne postoji nalog za ovaj email. Izaberite drugu firmu.")
+                        .setCancelable(false)
+                        .setPositiveButton("Izaberi firmu") { _, _ ->
+                            startActivity(Intent(this@LoginActivity, SettingsActivity::class.java))
+                        }
+                        .show()
+
+                    b.tvLoginStatus.text = e.message ?: "Ne postoji nalog za ovaj email."
+                } else {
+                    b.tvLoginStatus.text = "Ne mogu da učitam nalog. (${e.message ?: "greška"})"
                 }
+
                 b.btnLogin.isEnabled = true
             }
         }
@@ -159,6 +200,7 @@ class LoginActivity : AppCompatActivity() {
     // ---------------- Manual login (email + PIN) ----------------
 
     private fun attemptLogin() {
+        if (!ensureUsersSourceSelected()) return
         if (LoginLockoutPrefs.isLocked(this)) {
             updateLockUi()
             return
@@ -192,14 +234,17 @@ class LoginActivity : AppCompatActivity() {
 
         lifecycleScope.launch {
             try {
-                val path = DropboxJsonClient.pathForEmail(email)
+                val activeFolder = SettingsPrefs.getPendingUsersFolder(this@LoginActivity)
+                    .ifBlank { SettingsPrefs.getSelectedUsersFolder(this@LoginActivity) }
 
-                val jsonText = try {
-                    withContext(Dispatchers.IO) { DropboxJsonClient.downloadJsonByPath(path) }
-                } catch (ex: Exception) {
-                    val cached = UserJsonCache.loadJson(this@LoginActivity, email)
-                    if (cached.isNullOrBlank()) throw ex
-                    cached
+                val path = if (activeFolder.isNotBlank()) {
+                    DropboxJsonClient.pathForEmail(email, activeFolder)
+                } else {
+                    DropboxJsonClient.pathForEmail(email)
+                }
+
+                val jsonText = withContext(Dispatchers.IO) {
+                    DropboxJsonClient.downloadJsonByPath(path)
                 }
 
                 saveCache(email, jsonText)
@@ -214,6 +259,7 @@ class LoginActivity : AppCompatActivity() {
                         stopLockTicker()
 
                         applyStore(result.store)
+                        SettingsPrefs.commitPendingUsersSource(this@LoginActivity)
                         maybeOfferEnablePhoneUnlock(email)
                     }
                     is VerifyResult.FailWrongPin -> {
@@ -236,10 +282,23 @@ class LoginActivity : AppCompatActivity() {
                     }
                 }
             } catch (e: Exception) {
-                b.tvLoginStatus.text = when (e) {
-                    is UserNotFoundException -> e.message ?: "Ne postoji nalog za ovaj email."
-                    else -> "Ne mogu da učitam nalog za ovaj email. (${e.message ?: "greška"})"
+                if (e is UserNotFoundException) {
+                    SettingsPrefs.clearPendingUsersSource(this@LoginActivity)
+
+                    AlertDialog.Builder(this@LoginActivity)
+                        .setTitle("Pogrešna firma")
+                        .setMessage("U izabranoj firmi ne postoji nalog za ovaj email. Izaberite drugu firmu.")
+                        .setCancelable(false)
+                        .setPositiveButton("Izaberi firmu") { _, _ ->
+                            startActivity(Intent(this@LoginActivity, SettingsActivity::class.java))
+                        }
+                        .show()
+
+                    b.tvLoginStatus.text = e.message ?: "Ne postoji nalog za ovaj email."
+                } else {
+                    b.tvLoginStatus.text = "Ne mogu da učitam nalog za ovaj email. (${e.message ?: "greška"})"
                 }
+
                 b.btnLogin.isEnabled = true
             }
         }
@@ -580,6 +639,12 @@ class LoginActivity : AppCompatActivity() {
         )
     }
 
+    private fun ensureUsersSourceSelected(): Boolean {
+        val effectiveFolder = SettingsPrefs.getPendingUsersFolder(this)
+            .ifBlank { SettingsPrefs.getSelectedUsersFolder(this) }
+
+        return effectiveFolder.isNotBlank()
+    }
     private fun applyStore(store: StoreSnapshot) {
         LoyaltyStore.schemaVersion = store.schemaVersion
         LoyaltyStore.lastRefresh = store.lastRefresh
@@ -603,5 +668,25 @@ class LoginActivity : AppCompatActivity() {
 
         val at = if (cachedAt.isNotBlank()) cachedAt else OffsetDateTime.now().toString()
         UserJsonCache.save(this, email, jsonText, at)
+    }
+    private fun refreshSelectedCompanyUi() {
+        val pendingLabel = SettingsPrefs.getPendingUsersLabel(this)
+        val selectedLabel = SettingsPrefs.getSelectedUsersLabel(this)
+
+        b.tvSelectedCompanyValue.text = when {
+            pendingLabel.isNotBlank() -> "Firma: $pendingLabel"
+            selectedLabel.isNotBlank() -> "Firma: $selectedLabel"
+            else -> "Firma: nije izabrana"
+        }
+    }
+    private fun refreshCompanyPickUi() {
+        val effectiveFolder = SettingsPrefs.getPendingUsersFolder(this)
+            .ifBlank { SettingsPrefs.getSelectedUsersFolder(this) }
+
+        b.btnPickCompany.visibility = if (effectiveFolder.isBlank()) {
+            android.view.View.VISIBLE
+        } else {
+            android.view.View.GONE
+        }
     }
 }

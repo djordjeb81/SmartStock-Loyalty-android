@@ -44,12 +44,38 @@
                 android:textStyle="bold" />
 
             <TextView
+                android:id="@+id/tvSelectedCompanyValue"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:layout_marginBottom="14dp"
+                android:gravity="center"
+                android:text="Firma: nije izabrana"
+                android:textColor="@color/brand_blue"
+                android:textSize="13sp"
+                android:alpha="0.75" />
+
+            <Button
+                android:id="@+id/btnPickCompany"
+                style="@style/SmartOutlineButton"
+                android:layout_width="match_parent"
+                android:layout_height="44dp"
+                android:layout_marginBottom="14dp"
+                android:background="@drawable/button_outline_active"
+                android:text="IZABERI FIRMU"
+                android:textAllCaps="true"
+                android:textColor="@color/brand_blue"
+                android:visibility="gone" />
+
+            <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginBottom="4dp"
                 android:text="Email:"
                 android:textColor="@color/brand_blue"
                 android:textStyle="bold" />
+
+
 
             <com.google.android.material.textfield.TextInputLayout
                 android:id="@+id/tilEmail"
